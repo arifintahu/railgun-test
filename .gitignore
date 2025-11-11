@@ -1,0 +1,34 @@
+# Node
+node_modules/
+dist/
+coverage/
+.nyc_output/
+
+# Logs
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# TypeScript
+*.tsbuildinfo
+
+# IDE & tooling
+.vscode/
+.idea/
+.eslintcache
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# RAILGUN runtime data
+engine.db/
+artifacts/
