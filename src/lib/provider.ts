@@ -1,5 +1,5 @@
 import { JsonRpcProvider, Wallet } from "ethers";
-import { TEST_MNEMONIC, TEST_RPC_URL } from "./constants";
+import { TEST_MNEMONIC, TEST_RPC_URL } from "../constants";
 
 export const getProviderWallet = () => {
   const provider = new JsonRpcProvider(TEST_RPC_URL);

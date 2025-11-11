@@ -1,54 +1,15 @@
 import 'dotenv/config';
-import { JsonRpcProvider, Wallet, Contract, parseUnits, type BigNumberish } from 'ethers';
+import { Contract, parseUnits, type BigNumberish } from 'ethers';
 
-import {
-  startRailgunEngine,
-  stopRailgunEngine,
-  getProver,
-  type SnarkJSGroth16,
-  createRailgunWallet,
-  loadProvider,
-  refreshBalances,
-  gasEstimateForUnprovenTransfer,
-  generateTransferProof,
-  populateProvedTransfer,
-} from '@railgun-community/wallet';
-import { groth16 } from 'snarkjs';
+import { stopRailgunEngine, createRailgunWallet, refreshBalances, gasEstimateForUnprovenTransfer, generateTransferProof, populateProvedTransfer } from '@railgun-community/wallet';
 
-import {
-  calculateGasPrice,
-  type RailgunERC20AmountRecipient,
-  EVMGasType,
-  type TransactionGasDetails,
-  TXIDVersion,
-  FallbackProviderJsonConfig,
-  ChainType,
-} from '@railgun-community/shared-models';
-import {
-  TEST_RPC_URL,
-  TEST_MNEMONIC,
-  TEST_ERC20_TOKEN_ADDRESS,
-  TEST_SHIELD_AMOUNT,
-  TEST_ENCRYPTION_KEY,
-  TEST_NETWORK,
-  TEST_NETWORK_ID,
-  TEST_WALLET_SOURCE,
-  TEST_POI_NODE_URL,
-} from './constants';
-import { createArtifactStore } from './artifact-store';
-import { createNodeDatabase } from './database';
-
-const getGasDetailsForTransaction = async (
-  provider: JsonRpcProvider,
-): Promise<TransactionGasDetails> => {
-  const fee = await provider.getFeeData();
-  return {
-    evmGasType: EVMGasType.Type2,
-    gasEstimate: undefined,
-    maxFeePerGas: fee.maxFeePerGas ?? (1n * 10n ** 9n),
-    maxPriorityFeePerGas: fee.maxPriorityFeePerGas ?? (1n * 10n ** 9n),
-  };
-};
+import { calculateGasPrice, type RailgunERC20AmountRecipient, TXIDVersion, ChainType } from '@railgun-community/shared-models';
+import { TEST_RPC_URL, TEST_MNEMONIC, TEST_ERC20_TOKEN_ADDRESS, TEST_SHIELD_AMOUNT, TEST_ENCRYPTION_KEY, TEST_NETWORK, TEST_NETWORK_ID, TEST_WALLET_SOURCE, TEST_POI_NODE_URL } from './constants';
+import { initializeEngine } from './lib/engine-init';
+import { loadEngineProvider } from './lib/engine';
+import { setupNodeGroth16 } from './lib/prover';
+import { getProviderWallet } from './lib/provider';
+import { getGasDetailsForTransaction } from './lib/gas';
 
 async function main(): Promise<void> {
   const SEPOLIA_RPC_URL = TEST_RPC_URL;
@@ -59,35 +20,23 @@ async function main(): Promise<void> {
   // recipient can be direct 0zk, or derived from mnemonic
   let recipient0zk = process.env.RECIPIENT_RAILGUN_ADDRESS;
 
-  const provider = new JsonRpcProvider(SEPOLIA_RPC_URL);
-  const publicWallet = Wallet.fromPhrase(SENDER_MNEMONIC, provider);
+  const { provider, wallet: publicWallet } = getProviderWallet();
 
   // Start engine
-  const db = createNodeDatabase('./engine.db');
-  const artifactStore = createArtifactStore('./artifacts');
-  await startRailgunEngine(
-    TEST_WALLET_SOURCE,
-    db as unknown as any,
-    true,
-    artifactStore,
-    false,
-    false,
-    [TEST_POI_NODE_URL],
-    [],
-    false,
-  );
+  await initializeEngine({
+    walletSource: TEST_WALLET_SOURCE,
+    dbPath: './engine.db',
+    artifactsPath: './artifacts',
+    ppoiNodes: [TEST_POI_NODE_URL],
+    skipMerkletreeScans: false,
+  });
 
   // Configure Groth16 prover for Node.js environment
-  // @ts-ignore
-  getProver().setSnarkJSGroth16(groth16 as SnarkJSGroth16);
+  await setupNodeGroth16();
 
   // Connect Sepolia
   const network = TEST_NETWORK;
-  const providerConfig: FallbackProviderJsonConfig = {
-    chainId: TEST_NETWORK_ID,
-    providers: [{ provider: SEPOLIA_RPC_URL, priority: 1, weight: 2 }],
-  };
-  await loadProvider(providerConfig, network);
+  await loadEngineProvider(SEPOLIA_RPC_URL);
 
   // Create/load sender 0zk
   const encryptionKey = TEST_ENCRYPTION_KEY;

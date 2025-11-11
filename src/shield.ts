@@ -1,48 +1,15 @@
 import 'dotenv/config';
-import { JsonRpcProvider, Wallet, Contract, parseUnits, keccak256, type BigNumberish, type Signer } from 'ethers';
+import { Contract, parseUnits, keccak256, type BigNumberish, type Signer } from 'ethers';
 
-import {
-  startRailgunEngine,
-  stopRailgunEngine,
-  createRailgunWallet,
-  loadProvider,
-  gasEstimateForShield,
-  populateShield,
-} from '@railgun-community/wallet';
+import { stopRailgunEngine, createRailgunWallet, gasEstimateForShield, populateShield } from '@railgun-community/wallet';
 
-import {
-  calculateGasPrice,
-  TXIDVersion,
-  EVMGasType,
-  type TransactionGasDetails,
-  FallbackProviderJsonConfig,
-} from '@railgun-community/shared-models';
+import { calculateGasPrice, TXIDVersion } from '@railgun-community/shared-models';
 
-import { 
-    TEST_MNEMONIC,
-    TEST_NETWORK,
-    TEST_RPC_URL,
-    TEST_ERC20_TOKEN_ADDRESS,
-    TEST_ENCRYPTION_KEY,
-    TEST_SHIELD_AMOUNT,
-    TEST_NETWORK_ID,
-    TEST_WALLET_SOURCE,
-    TEST_POI_NODE_URL,
-} from './constants';
-import { createNodeDatabase } from './database';
-import { createArtifactStore } from './artifact-store';
-
-const getGasDetailsForTransaction = async (
-  provider: JsonRpcProvider,
-): Promise<TransactionGasDetails> => {
-  const fee = await provider.getFeeData();
-  return {
-    evmGasType: EVMGasType.Type2,
-    gasEstimate: undefined,
-    maxFeePerGas: fee.maxFeePerGas ?? (1n * 10n ** 9n),
-    maxPriorityFeePerGas: fee.maxPriorityFeePerGas ?? (1n * 10n ** 9n),
-  };
-};
+import { TEST_MNEMONIC, TEST_NETWORK, TEST_RPC_URL, TEST_ERC20_TOKEN_ADDRESS, TEST_ENCRYPTION_KEY, TEST_SHIELD_AMOUNT, TEST_WALLET_SOURCE, TEST_POI_NODE_URL } from './constants';
+import { loadEngineProvider } from './lib/engine';
+import { initializeEngine } from './lib/engine-init';
+import { getProviderWallet } from './lib/provider';
+import { getGasDetailsForTransaction } from './lib/gas';
 
 async function getShieldSignature(signer: Signer): Promise<string> {
   // The cookbook/docs refer to this helper. Many projects implement it as:
@@ -54,41 +21,22 @@ async function getShieldSignature(signer: Signer): Promise<string> {
 }
 
 async function main(): Promise<void> {
-  const provider = new JsonRpcProvider(TEST_RPC_URL);
+  const { provider, wallet: publicWallet } = getProviderWallet();
   console.log('Provider:', provider);
-  const publicWallet = Wallet.fromPhrase(TEST_MNEMONIC, provider);
 
-  // Start engine
-  const db = createNodeDatabase('./engine.db');
-  const artifactStore = createArtifactStore('./artifacts');
-  const isDebug = true;
-  const useNativeArtifacts = false;
-  const skipMerkletreeScans = false;
-  const customPOILists = undefined;
-  const verboseScanLogging = false;
   console.log('Starting engine...');
-  await startRailgunEngine(
-    TEST_WALLET_SOURCE,
-    db as unknown as any,
-    isDebug,
-    artifactStore,
-    useNativeArtifacts,
-    skipMerkletreeScans,
-    [TEST_POI_NODE_URL],
-    customPOILists,
-    verboseScanLogging,
-  );
+  await initializeEngine({
+    walletSource: TEST_WALLET_SOURCE,
+    dbPath: './engine.db',
+    artifactsPath: './artifacts',
+    ppoiNodes: [TEST_POI_NODE_URL],
+    skipMerkletreeScans: false,
+  });
   console.log('Engine started.');
 
   // Connect Sepolia
   console.log('Connecting to Sepolia...');
-  const providerConfig: FallbackProviderJsonConfig = {
-      chainId: TEST_NETWORK_ID,
-      providers: [
-        { provider: TEST_RPC_URL, priority: 1, weight: 2 },
-      ],
-    };
-  await loadProvider(providerConfig, TEST_NETWORK);
+  await loadEngineProvider(TEST_RPC_URL);
   console.log('Connected to Sepolia.');
 
   // Create/load sender 0zk
