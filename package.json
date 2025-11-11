@@ -10,7 +10,9 @@
     "shield": "ts-node src/shield.ts",
     "transfer": "ts-node src/transfer.ts",
     "refresh": "ts-node src/refresh-balances.ts",
-    "unshield": "ts-node src/unshield.ts"
+    "unshield": "ts-node src/unshield.ts",
+    "pois": "ts-node src/generate-pois.ts",
+    "gen-0zk": "ts-node src/gen-0zk.ts"
   },
   "author": "",
   "license": "ISC",
