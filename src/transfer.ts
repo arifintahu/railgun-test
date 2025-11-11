@@ -50,6 +50,7 @@ async function main(): Promise<void> {
   if (!recipient0zk) {
     throw new Error('Set RECIPIENT_RAILGUN_ADDRESS or RECIPIENT_MNEMONIC in .env');
   }
+  console.log('Recipient 0zk:', recipient0zk);
 
   // Ensure balances are synced
   const chain = { type: ChainType.EVM, id: TEST_NETWORK_ID };
