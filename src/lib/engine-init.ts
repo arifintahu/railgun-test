@@ -99,7 +99,7 @@ export const initializeEngine = async (args?: {
   // (additional developer information coming soon).
 
   // LEAVE THIS OUT IN PRODUCTION. This is a public aggregator node for testing purposes.
-  const poiNodeURLs: string[] = args?.ppoiNodes ?? ["https://ppoi-agg.horsewithsixlegs.xyz"];
+  const poiNodeURLs: string[] = args?.ppoiNodes ?? [];
 
   // Add a custom list to check Proof of Innocence against.
   // Leave blank to use the default list for the aggregator node provided.
@@ -115,7 +115,7 @@ export const initializeEngine = async (args?: {
     artifactStore,
     useNativeArtifacts,
     skipMerkletreeScans,
-    poiNodeURLs,
+    [...poiNodeURLs, "https://ppoi-agg.horsewithsixlegs.xyz"],
     customPOILists,
     verboseScanLogging
   );
