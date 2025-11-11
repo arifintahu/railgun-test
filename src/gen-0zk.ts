@@ -14,10 +14,9 @@ import {
     TEST_NETWORK,
     TEST_RPC_URL,
     TEST_MNEMONIC,
+    TEST_WALLET_SOURCE,
 } from './constants';
 
-// ---------- CONFIG ----------
-const WALLET_SOURCE = '39009477486d5275';
 
 // ---------- BOOTSTRAP ----------
 async function main() {
@@ -25,9 +24,11 @@ async function main() {
   const provider = new ethers.JsonRpcProvider(TEST_RPC_URL);
   void provider; // provider shown for parity with example; engine uses URL string
 
+  const ACCOUNT_INDEX = Number(process.env.ACCOUNT_INDEX ?? '0');
+
   // Initialize RAILGUN engine with wallet source and scanning enabled
   await initializeEngine({
-    walletSource: WALLET_SOURCE,
+    walletSource: TEST_WALLET_SOURCE,
     skipMerkletreeScans: false,
   });
 
@@ -39,6 +40,7 @@ async function main() {
     TEST_ENCRYPTION_KEY,
     TEST_MNEMONIC,
     null,
+    ACCOUNT_INDEX,
   );
 
   // Derive the 0zk address for the target network
@@ -55,6 +57,7 @@ async function main() {
       {
         zerozkAddress, // use as private recipient when shielding
         viewingKey, // safe to share for read-only monitoring
+        accountIndex: ACCOUNT_INDEX,
       },
       null,
       2,
