@@ -9,7 +9,8 @@
     "start": "ts-node src/shield.ts",
     "shield": "ts-node src/shield.ts",
     "transfer": "ts-node src/transfer.ts",
-    "refresh": "ts-node src/refresh-balances.ts"
+    "refresh": "ts-node src/refresh-balances.ts",
+    "unshield": "ts-node src/unshield.ts"
   },
   "author": "",
   "license": "ISC",
