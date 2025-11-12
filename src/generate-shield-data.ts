@@ -44,6 +44,7 @@ async function main(): Promise<void> {
     TEST_ERC20_TOKEN_ADDRESS,
     [
       'function decimals() view returns (uint8)',
+      'function balanceOf(address owner) view returns (uint256)',
       'function allowance(address owner, address spender) view returns (uint256)',
       'function approve(address spender, uint256 amount) returns (bool)',
     ],
@@ -104,9 +105,13 @@ async function main(): Promise<void> {
 
   // check allowance
   const spender = transaction.to as string;
+  const balance: bigint = await erc20.balanceOf(accountAddress);
+  console.log('Current ERC20 balance:', balance);
   const allowance: bigint = await erc20.allowance(accountAddress, spender);
   console.log('Current allowance:', allowance);
-  if (allowance < amount) {
+  if (balance < amount) {
+    console.log('Insufficient balance to approve');
+  } else if (allowance < amount) {
     const approveData = erc20.interface.encodeFunctionData('approve', [spender, amount]);
     const approveTxPayload = new AbiCoder().encode(["address", "uint256", "bytes"], [TEST_ERC20_TOKEN_ADDRESS, 0n, approveData]);
     console.log('ERC20 approve tx payload:', approveTxPayload);
