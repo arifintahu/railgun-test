@@ -92,6 +92,16 @@ async function main(): Promise<void> {
     txGas,
   );
 
+  console.log('Populate shield:', {
+    txIdVersion: TXIDVersion.V2_PoseidonMerkle,
+    networkName: TEST_NETWORK,
+    shieldPrivateKey: shieldPrivateKey,
+    erc20AmountRecipients: recipients,
+    nftAmountRecipients: [],
+    gasDetails: txGas,
+  });
+  console.log('Populated shield tx:', transaction);
+
   console.log('Broadcasting shield tx…');
   const shieldTx = await publicWallet.sendTransaction(transaction);
   console.log('Shield tx hash:', shieldTx.hash);
