@@ -1,5 +1,5 @@
 import 'dotenv/config';
-import { AbiCoder, parseUnits, keccak256, type BigNumberish } from 'ethers';
+import { AbiCoder, parseUnits, keccak256, type BigNumberish, Contract } from 'ethers';
 
 import { stopRailgunEngine, gasEstimateForShield, populateShield } from '@railgun-community/wallet';
 
@@ -39,7 +39,19 @@ async function main(): Promise<void> {
   console.log('Account Address:', accountAddress);
   console.log('Recipient 0zk:', recipientRailgunAddress);
 
-  const amount: BigNumberish = parseUnits(TEST_SHIELD_AMOUNT, 18);
+  // Read token decimals and amount
+  const erc20 = new Contract(
+    TEST_ERC20_TOKEN_ADDRESS,
+    [
+      'function decimals() view returns (uint8)',
+      'function allowance(address owner, address spender) view returns (uint256)',
+      'function approve(address spender, uint256 amount) returns (bool)',
+    ],
+    relayerWallet,
+  );
+  const decimals: number = await erc20.decimals();
+  console.log('Token decimals:', decimals);
+  const amount: BigNumberish = parseUnits(TEST_SHIELD_AMOUNT, decimals);
 
   // Build shield recipients (self-shield)
   const recipients = [
@@ -87,9 +99,18 @@ async function main(): Promise<void> {
   });
   console.log('Populated shield tx:', transaction);
 
-  const value: BigNumberish = (transaction as any).value ?? 0n;
-  const txPayload = new AbiCoder().encode(["address", "uint256", "bytes"], [transaction.to, value, transaction.data]);
+  const txPayload = new AbiCoder().encode(["address", "uint256", "bytes"], [transaction.to, 0n, transaction.data]);
   console.log('Transaction payload:', txPayload);
+
+  // check allowance
+  const spender = transaction.to as string;
+  const allowance: bigint = await erc20.allowance(accountAddress, spender);
+  console.log('Current allowance:', allowance);
+  if (allowance < amount) {
+    const approveData = erc20.interface.encodeFunctionData('approve', [spender, amount]);
+    const approveTxPayload = new AbiCoder().encode(["address", "uint256", "bytes"], [TEST_ERC20_TOKEN_ADDRESS, 0n, approveData]);
+    console.log('ERC20 approve tx payload:', approveTxPayload);
+  }
 }
 
 process.on('SIGINT', async () => {

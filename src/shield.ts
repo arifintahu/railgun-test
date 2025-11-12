@@ -49,6 +49,7 @@ async function main(): Promise<void> {
     TEST_ERC20_TOKEN_ADDRESS,
     [
       'function decimals() view returns (uint8)',
+      'function allowance(address owner, address spender) view returns (uint256)',
       'function approve(address spender, uint256 amount) returns (bool)',
     ],
     publicWallet,
@@ -102,6 +103,15 @@ async function main(): Promise<void> {
     gasDetails: txGas,
   });
   console.log('Populated shield tx:', transaction);
+
+  const spender = transaction.to as string;
+  const allowance: bigint = await erc20.allowance(publicWallet.address, spender);
+  console.log('Current allowance:', allowance);
+  if (allowance < amount) {
+    const approveTx = await erc20.approve(spender, amount);
+    await approveTx.wait();
+    console.log('Approved allowance:', approveTx.hash);
+  }
 
   console.log('Broadcasting shield tx…');
   const shieldTx = await publicWallet.sendTransaction(transaction);
