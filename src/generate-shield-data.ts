@@ -10,6 +10,7 @@ import { loadEngineProvider } from './lib/engine';
 import { initializeEngine } from './lib/engine-init';
 import { getProviderWallet } from './lib/provider';
 import { getGasDetailsForTransaction } from './lib/gas';
+import { combineHexStrings } from './lib/hex';
 
 async function getShieldPrivateKey(address: string): Promise<string> {
   return keccak256(address);
@@ -100,7 +101,8 @@ async function main(): Promise<void> {
   });
   console.log('Populated shield tx:', transaction);
 
-  const txPayload = new AbiCoder().encode(["address", "uint256", "bytes"], [transaction.to, 0n, transaction.data]);
+  const payloadAddress = new AbiCoder().encode(["address", "uint256"], [transaction.to, 0]);
+  const txPayload = combineHexStrings(payloadAddress, transaction.data);
   console.log('Transaction payload:', txPayload);
 
   // check allowance
@@ -112,8 +114,11 @@ async function main(): Promise<void> {
   if (balance < amount) {
     console.log('Insufficient balance to approve');
   } else if (allowance < amount) {
+    const payloadAddress = new AbiCoder().encode(["address", "uint256"], [TEST_ERC20_TOKEN_ADDRESS, 0]);
     const approveData = erc20.interface.encodeFunctionData('approve', [spender, amount]);
-    const approveTxPayload = new AbiCoder().encode(["address", "uint256", "bytes"], [TEST_ERC20_TOKEN_ADDRESS, 0n, approveData]);
+    const approveTxPayload = combineHexStrings(payloadAddress, approveData);
+    console.log('Test ERC20 token address:', TEST_ERC20_TOKEN_ADDRESS);
+    console.log('ERC20 approve function data:', approveData);
     console.log('ERC20 approve tx payload:', approveTxPayload);
   }
 }
