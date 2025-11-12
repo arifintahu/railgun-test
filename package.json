@@ -12,7 +12,8 @@
     "refresh": "ts-node src/refresh-balances.ts",
     "unshield": "ts-node src/unshield.ts",
     "pois": "ts-node src/generate-pois.ts",
-    "gen-0zk": "ts-node src/gen-0zk.ts"
+    "gen-0zk": "ts-node src/gen-0zk.ts",
+    "gen-shield-data": "ts-node src/generate-shield-data.ts"
   },
   "author": "",
   "license": "ISC",

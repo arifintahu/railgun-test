@@ -11,18 +11,12 @@ import { initializeEngine } from './lib/engine-init';
 import { getProviderWallet } from './lib/provider';
 import { getGasDetailsForTransaction } from './lib/gas';
 
-async function getShieldSignature(signer: Signer): Promise<string> {
-  // The cookbook/docs refer to this helper. Many projects implement it as:
-  // sign a fixed message and hash it to get a 32-byte key.
-  // Keep the message constant so relayers/wallets can reproduce behavior.
-  const MESSAGE = 'RAILGUN_SHIELD';
-  const sig = await signer.signMessage(MESSAGE);
-  return keccak256(sig as `0x${string}`);
+async function getShieldPrivateKey(address: string): Promise<string> {
+  return keccak256(address);
 }
 
 async function main(): Promise<void> {
-  const { provider, wallet: publicWallet } = getProviderWallet();
-  console.log('Provider:', provider);
+  const { provider, wallet: relayerWallet } = getProviderWallet();
 
   console.log('Starting engine...');
   await initializeEngine({
@@ -40,42 +34,32 @@ async function main(): Promise<void> {
   console.log('Connected to Sepolia.');
 
   // Create/load sender 0zk
-  const encryptionKey = TEST_ENCRYPTION_KEY;
-  const senderRailgun = await createRailgunWallet(encryptionKey, TEST_MNEMONIC, null);
-  console.log('Sender 0zk:', senderRailgun.railgunAddress);
+  const recipientRailgunAddress = process.env.RECIPIENT_RAILGUN_ADDRESS;
+  const accountAddress = process.env.ACCOUNT_ADDRESS;
+  console.log('Account Address:', accountAddress);
+  console.log('Recipient 0zk:', recipientRailgunAddress);
 
-  // Read token decimals and amount
-  const erc20 = new Contract(
-    TEST_ERC20_TOKEN_ADDRESS,
-    [
-      'function decimals() view returns (uint8)',
-      'function approve(address spender, uint256 amount) returns (bool)',
-    ],
-    publicWallet,
-  );
-  const decimals: number = await erc20.decimals();
-  console.log('Token decimals:', decimals);
-  const amount: BigNumberish = parseUnits(TEST_SHIELD_AMOUNT, decimals);
+  const amount: BigNumberish = parseUnits(TEST_SHIELD_AMOUNT, 18);
 
   // Build shield recipients (self-shield)
   const recipients = [
     {
       tokenAddress: TEST_ERC20_TOKEN_ADDRESS,
       amount,
-      recipientAddress: senderRailgun.railgunAddress,
+      recipientAddress: recipientRailgunAddress,
     },
   ];
 
   // Estimate + populate shield tx
   console.log('Estimating gas for shield transaction...');
-  const shieldPrivateKey = await getShieldSignature(publicWallet);
+  const shieldPrivateKey = await getShieldPrivateKey(accountAddress);
   const gasEstimate = await gasEstimateForShield(
     TXIDVersion.V2_PoseidonMerkle,
     TEST_NETWORK,
     shieldPrivateKey,
     recipients,
     [],
-    publicWallet.address,
+    relayerWallet.address,
   );
   console.log('Gas estimate:', gasEstimate.gasEstimate);
 
@@ -102,12 +86,6 @@ async function main(): Promise<void> {
     gasDetails: txGas,
   });
   console.log('Populated shield tx:', transaction);
-
-  console.log('Broadcasting shield tx…');
-  const shieldTx = await publicWallet.sendTransaction(transaction);
-  console.log('Shield tx hash:', shieldTx.hash);
-  await shieldTx.wait();
-  console.log('✅ Shielded successfully.');
 }
 
 process.on('SIGINT', async () => {
