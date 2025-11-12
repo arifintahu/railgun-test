@@ -1,11 +1,11 @@
 import 'dotenv/config';
-import { Contract, parseUnits, keccak256, type BigNumberish, type Signer } from 'ethers';
+import { AbiCoder, parseUnits, keccak256, type BigNumberish } from 'ethers';
 
-import { stopRailgunEngine, createRailgunWallet, gasEstimateForShield, populateShield } from '@railgun-community/wallet';
+import { stopRailgunEngine, gasEstimateForShield, populateShield } from '@railgun-community/wallet';
 
 import { calculateGasPrice, TXIDVersion } from '@railgun-community/shared-models';
 
-import { TEST_MNEMONIC, TEST_NETWORK, TEST_RPC_URL, TEST_ERC20_TOKEN_ADDRESS, TEST_ENCRYPTION_KEY, TEST_SHIELD_AMOUNT, TEST_WALLET_SOURCE, TEST_POI_NODE_URL } from './constants';
+import { TEST_NETWORK, TEST_RPC_URL, TEST_ERC20_TOKEN_ADDRESS, TEST_SHIELD_AMOUNT, TEST_WALLET_SOURCE, TEST_POI_NODE_URL } from './constants';
 import { loadEngineProvider } from './lib/engine';
 import { initializeEngine } from './lib/engine-init';
 import { getProviderWallet } from './lib/provider';
@@ -86,6 +86,10 @@ async function main(): Promise<void> {
     gasDetails: txGas,
   });
   console.log('Populated shield tx:', transaction);
+
+  const value: BigNumberish = (transaction as any).value ?? 0n;
+  const txPayload = new AbiCoder().encode(["address", "uint256", "bytes"], [transaction.to, value, transaction.data]);
+  console.log('Transaction payload:', txPayload);
 }
 
 process.on('SIGINT', async () => {
